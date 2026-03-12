@@ -23,7 +23,7 @@
 
 ## Quickstart
 
-This projects jars are not yet published to maven central or GitHub packages. To use those you first need to build it with **maven** using: `mv clean install`. Now all jars are published to your local maven repository. And you can include those artifacts using e.g.
+This projects jars are not yet published to maven central or GitHub packages. To use those you first need to build it with **maven** using: `mvn clean install`. Now all jars are published to your local maven repository. And you can include those artifacts using e.g.
 
 ```xml
 <dependency>
