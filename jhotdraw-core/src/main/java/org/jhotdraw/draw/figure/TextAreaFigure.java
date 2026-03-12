@@ -9,7 +9,6 @@ package org.jhotdraw.draw.figure;
 
 import static org.jhotdraw.draw.AttributeKeys.*;
 
-import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics2D;
@@ -69,8 +68,6 @@ public class TextAreaFigure extends AbstractAttributedDecoratedFigure implements
   private static final long serialVersionUID = 1L;
   protected Rectangle2D.Double bounds = new Rectangle2D.Double();
   protected boolean editable = true;
-  private static final BasicStroke DASHES = new BasicStroke(
-      1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0f, new float[] {4f, 4f}, 0f);
 
   /** This is a cached value to improve the performance of method isTextOverflow(); */
   private Boolean isTextOverflow;
