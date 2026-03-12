@@ -89,10 +89,6 @@ public class FocusWindowAction extends AbstractAction {
     return title;
   }
 
-  private JFrame getFrame() {
-    return (JFrame) SwingUtilities.getWindowAncestor(view.getComponent());
-  }
-
   private Component getRootPaneContainer() {
     return SwingUtilities.getRootPane(view.getComponent()).getParent();
   }
