@@ -25,7 +25,6 @@ import org.jhotdraw.utils.geom.Geom;
  */
 public class BezierScaleHandle extends AbstractHandle {
 
-  private Point location;
   private Object restoreData;
   private AffineTransform transform;
   private Point2D.Double center;
@@ -77,7 +76,6 @@ public class BezierScaleHandle extends AbstractHandle {
 
   @Override
   public void trackStart(Point anchor, int modifiersEx) {
-    location = new Point(anchor.x, anchor.y);
     restoreData = getBezierFigure().getTransformRestoreData();
     transform = new AffineTransform();
     center = getBezierFigure().getCenter();
@@ -88,7 +86,6 @@ public class BezierScaleHandle extends AbstractHandle {
 
   @Override
   public void trackStep(Point anchor, Point lead, int modifiersEx) {
-    location = new Point(lead.x, lead.y);
     Point2D.Double leadPoint = view.viewToDrawing(lead);
     double stepTheta = Geom.angle(center.x, center.y, leadPoint.x, leadPoint.y);
     double stepLength = Geom.length(center.x, center.y, leadPoint.x, leadPoint.y);
@@ -140,6 +137,5 @@ public class BezierScaleHandle extends AbstractHandle {
     view.getDrawing()
         .fireUndoableEditHappened(new TransformRestoreEdit(
             getOwner(), restoreData, getOwner().getTransformRestoreData()));
-    location = null;
   }
 }
