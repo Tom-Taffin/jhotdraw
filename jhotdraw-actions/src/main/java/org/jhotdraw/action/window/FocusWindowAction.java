@@ -28,7 +28,6 @@ public class FocusWindowAction extends AbstractAction {
     this.view = view;
     ResourceBundleUtil labels = ResourceBundleUtil.getBundle("org.jhotdraw.action.Labels");
     labels.configureAction(this, ID);
-    // setEnabled(false);
     setEnabled(view != null);
     ppc = new PropertyChangeListener() {
       @Override
@@ -95,20 +94,6 @@ public class FocusWindowAction extends AbstractAction {
 
   @Override
   public void actionPerformed(ActionEvent evt) {
-    /*
-    JFrame frame = getFrame();
-    if (frame != null) {
-    frame.setExtendedState(frame.getExtendedState() & ~Frame.ICONIFIED);
-    frame.toFront();
-    frame.requestFocus();
-    JRootPane rp = SwingUtilities.getRootPane(view.getComponent());
-    if (rp != null && (rp.getParent() instanceof JInternalFrame)) {
-    ((JInternalFrame) rp.getParent()).toFront();
-    }
-    view.getComponent().requestFocus();
-    } else {
-    Toolkit.getDefaultToolkit().beep();
-    }*/
     Component rpContainer = getRootPaneContainer();
     if (rpContainer instanceof Frame) {
       Frame frame = (Frame) rpContainer;
