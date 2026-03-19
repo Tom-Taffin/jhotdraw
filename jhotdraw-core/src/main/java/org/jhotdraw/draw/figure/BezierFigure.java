@@ -109,69 +109,6 @@ public class BezierFigure extends AbstractAttributedFigure {
     return new ChopBezierConnector(this);
   }
 
-  // COMPOSITE FIGURES
-  // CLONING
-  // EVENT HANDLING
-  @Override
-  protected void drawStroke(Graphics2D g) {
-    if (isClosed()) {
-      double grow = AttributeKeys.getPerpendicularDrawGrowth(
-          this, AttributeKeys.getScaleFactorFromGraphics(g));
-      if (grow == 0d) {
-        g.draw(path);
-      } else {
-        GrowStroke gs = new GrowStroke(
-            grow,
-            AttributeKeys.getStrokeTotalWidth(this, AttributeKeys.getScaleFactorFromGraphics(g))
-                * attr().get(STROKE_MITER_LIMIT));
-        g.draw(gs.createStrokedShape(path));
-      }
-    } else {
-      g.draw(getCappedPath(AttributeKeys.getScaleFactorFromGraphics(g)));
-    }
-    drawCaps(g);
-  }
-
-  protected void drawCaps(Graphics2D g) {
-    if (getNodeCount() > 1) {
-      if (attr().get(START_DECORATION) != null) {
-        BezierPath cp = getCappedPath(AttributeKeys.getScaleFactorFromGraphics(g));
-        Point2D.Double p1 = path.get(0, 0);
-        Point2D.Double p2 = cp.get(0, 0);
-        if (p2.equals(p1)) {
-          p2 = path.get(1, 0);
-        }
-        attr().get(START_DECORATION).draw(g, this, p1, p2);
-      }
-      if (attr().get(END_DECORATION) != null) {
-        BezierPath cp = getCappedPath(AttributeKeys.getScaleFactorFromGraphics(g));
-        Point2D.Double p1 = path.get(path.size() - 1, 0);
-        Point2D.Double p2 = cp.get(path.size() - 1, 0);
-        if (p2.equals(p1)) {
-          p2 = path.get(path.size() - 2, 0);
-        }
-        attr().get(END_DECORATION).draw(g, this, p1, p2);
-      }
-    }
-  }
-
-  @Override
-  protected void drawFill(Graphics2D g) {
-    if (isClosed() || attr().get(UNCLOSED_PATH_FILLED)) {
-      double grow = AttributeKeys.getPerpendicularFillGrowth(
-          this, AttributeKeys.getScaleFactorFromGraphics(g));
-      if (grow == 0d) {
-        g.fill(path);
-      } else {
-        GrowStroke gs = new GrowStroke(
-            grow,
-            AttributeKeys.getStrokeTotalWidth(this, AttributeKeys.getScaleFactorFromGraphics(g))
-                * attr().get(STROKE_MITER_LIMIT));
-        g.fill(gs.createStrokedShape(path));
-      }
-    }
-  }
-
   @Override
   public boolean contains(Point2D.Double p, double scaleDenominator) {
     double tolerance =
@@ -217,120 +154,6 @@ public class BezierFigure extends AbstractAttributedFigure {
       }
     }
     return false;
-  }
-
-  @Override
-  public Collection<Handle> createHandles(int detailLevel) {
-    List<Handle> handles = new ArrayList<>();
-    switch (detailLevel % 2) {
-      case -1: // Mouse hover handles
-        handles.add(new BezierOutlineHandle(this, true));
-        break;
-      case 0:
-        handles.add(new BezierOutlineHandle(this));
-        for (int i = 0, n = path.size(); i < n; i++) {
-          handles.add(new BezierNodeHandle(this, i));
-        }
-        break;
-      case 1:
-        TransformHandleKit.addTransformHandles(this, handles);
-        handles.add(new BezierScaleHandle(this));
-        break;
-    }
-    return handles;
-  }
-
-  @Override
-  public Rectangle2D.Double getBounds(double scale) {
-    Rectangle2D.Double bounds = path.getBounds2D();
-    return bounds;
-  }
-
-  @Override
-  public Rectangle2D.Double getDrawingArea(double factor) {
-    Rectangle2D.Double r = super.getDrawingArea(factor);
-    if (getNodeCount() > 1) {
-      if (attr().get(START_DECORATION) != null) {
-        Point2D.Double p1 = getPoint(0, 0);
-        Point2D.Double p2 = getPoint(1, 0);
-        r.add(attr().get(START_DECORATION).getDrawingArea(this, p1, p2, factor));
-      }
-      if (attr().get(END_DECORATION) != null) {
-        Point2D.Double p1 = getPoint(getNodeCount() - 1, 0);
-        Point2D.Double p2 = getPoint(getNodeCount() - 2, 0);
-        r.add(attr().get(END_DECORATION).getDrawingArea(this, p1, p2, factor));
-      }
-    }
-    return r;
-  }
-
-  @Override
-  protected void validate() {
-    super.validate();
-    path.invalidatePath();
-    cappedPath = null;
-  }
-
-  /** Returns a clone of the bezier path of this figure. */
-  public BezierPath getBezierPath() {
-    return path.clone();
-  }
-
-  public void setBezierPath(BezierPath newValue) {
-    path = newValue.clone();
-    this.setClosed(newValue.isClosed());
-  }
-
-  public Point2D.Double getPointOnPath(double relative, double flatness) {
-    return path.getPointOnPath(relative, flatness);
-  }
-
-  public boolean isClosed() {
-    return attr().get(PATH_CLOSED);
-  }
-
-  public void setClosed(boolean newValue) {
-    attr().set(PATH_CLOSED, newValue);
-    setConnectable(newValue);
-  }
-
-  @Override
-  protected <T> void fireAttributeChanged(AttributeKey<T> attribute, T oldValue, T newValue) {
-    if (attribute == PATH_CLOSED) {
-      path.setClosed((Boolean) newValue);
-    } else if (attribute == WINDING_RULE) {
-      path.setWindingRule(
-          newValue == AttributeKeys.WindingRule.EVEN_ODD
-              ? Path2D.Double.WIND_EVEN_ODD
-              : Path2D.Double.WIND_NON_ZERO);
-    }
-    invalidate();
-    super.fireAttributeChanged(attribute, oldValue, newValue);
-  }
-
-  /**
-   * Sets the location of the first and the last <code>BezierPath.Node</code> of the BezierFigure.
-   * If the BezierFigure has not at least two nodes, nodes are added to the figure until the
-   * BezierFigure has at least two nodes.
-   */
-  @Override
-  public void setBounds(Point2D.Double anchor, Point2D.Double lead) {
-    setStartPoint(anchor);
-    setEndPoint(lead);
-    invalidate();
-  }
-
-  @Override
-  public void transform(AffineTransform tx) {
-    path.transform(tx);
-    invalidate();
-  }
-
-  @Override
-  public void invalidate() {
-    super.invalidate();
-    path.invalidatePath();
-    cappedPath = null;
   }
 
   /**
@@ -383,6 +206,99 @@ public class BezierFigure extends AbstractAttributedFigure {
       }
     }
     return cappedPath;
+  }
+
+  @Override
+  public Collection<Handle> createHandles(int detailLevel) {
+    List<Handle> handles = new ArrayList<>();
+    switch (detailLevel % 2) {
+      case -1: // Mouse hover handles
+        handles.add(new BezierOutlineHandle(this, true));
+        break;
+      case 0:
+        handles.add(new BezierOutlineHandle(this));
+        for (int i = 0, n = path.size(); i < n; i++) {
+          handles.add(new BezierNodeHandle(this, i));
+        }
+        break;
+      case 1:
+        TransformHandleKit.addTransformHandles(this, handles);
+        handles.add(new BezierScaleHandle(this));
+        break;
+    }
+    return handles;
+  }
+
+  @Override
+  public Rectangle2D.Double getBounds(double scale) {
+    Rectangle2D.Double bounds = path.getBounds2D();
+    return bounds;
+  }
+
+  @Override
+  public Rectangle2D.Double getDrawingArea(double factor) {
+    Rectangle2D.Double r = super.getDrawingArea(factor);
+    if (getNodeCount() > 1) {
+      if (attr().get(START_DECORATION) != null) {
+        Point2D.Double p1 = getPoint(0, 0);
+        Point2D.Double p2 = getPoint(1, 0);
+        r.add(attr().get(START_DECORATION).getDrawingArea(this, p1, p2, factor));
+      }
+      if (attr().get(END_DECORATION) != null) {
+        Point2D.Double p1 = getPoint(getNodeCount() - 1, 0);
+        Point2D.Double p2 = getPoint(getNodeCount() - 2, 0);
+        r.add(attr().get(END_DECORATION).getDrawingArea(this, p1, p2, factor));
+      }
+    }
+    return r;
+  }
+
+  /** Returns a clone of the bezier path of this figure. */
+  public BezierPath getBezierPath() {
+    return path.clone();
+  }
+
+  public void setBezierPath(BezierPath newValue) {
+    path = newValue.clone();
+    this.setClosed(newValue.isClosed());
+  }
+
+  public Point2D.Double getPointOnPath(double relative, double flatness) {
+    return path.getPointOnPath(relative, flatness);
+  }
+
+  public boolean isClosed() {
+    return attr().get(PATH_CLOSED);
+  }
+
+  public void setClosed(boolean newValue) {
+    attr().set(PATH_CLOSED, newValue);
+    setConnectable(newValue);
+  }
+
+  /**
+   * Sets the location of the first and the last <code>BezierPath.Node</code> of the BezierFigure.
+   * If the BezierFigure has not at least two nodes, nodes are added to the figure until the
+   * BezierFigure has at least two nodes.
+   */
+  @Override
+  public void setBounds(Point2D.Double anchor, Point2D.Double lead) {
+    setStartPoint(anchor);
+    setEndPoint(lead);
+    invalidate();
+  }
+
+  @Override
+  public void transform(AffineTransform tx) {
+    path.transform(tx);
+    invalidate();
+  }
+
+  @Override
+  public void invalidate() {
+    super.invalidate();
+    path.invalidatePath();
+    cappedPath = null;
   }
 
   /** Adds a control point. */
@@ -542,11 +458,6 @@ public class BezierFigure extends AbstractAttributedFigure {
     return path.remove(index);
   }
 
-  /** Removes the Point2D.Double at the specified index. */
-  protected void removeAllNodes() {
-    path.clear();
-  }
-
   /** Gets the node count. */
   public int getNodeCount() {
     return path.size();
@@ -653,5 +564,94 @@ public class BezierFigure extends AbstractAttributedFigure {
       }
     }
     return false;
+  }
+
+  // COMPOSITE FIGURES
+  // CLONING
+  // EVENT HANDLING
+  @Override
+  protected void drawStroke(Graphics2D g) {
+    if (isClosed()) {
+      double grow = AttributeKeys.getPerpendicularDrawGrowth(
+          this, AttributeKeys.getScaleFactorFromGraphics(g));
+      if (grow == 0d) {
+        g.draw(path);
+      } else {
+        GrowStroke gs = new GrowStroke(
+            grow,
+            AttributeKeys.getStrokeTotalWidth(this, AttributeKeys.getScaleFactorFromGraphics(g))
+                * attr().get(STROKE_MITER_LIMIT));
+        g.draw(gs.createStrokedShape(path));
+      }
+    } else {
+      g.draw(getCappedPath(AttributeKeys.getScaleFactorFromGraphics(g)));
+    }
+    drawCaps(g);
+  }
+
+  protected void drawCaps(Graphics2D g) {
+    if (getNodeCount() > 1) {
+      if (attr().get(START_DECORATION) != null) {
+        BezierPath cp = getCappedPath(AttributeKeys.getScaleFactorFromGraphics(g));
+        Point2D.Double p1 = path.get(0, 0);
+        Point2D.Double p2 = cp.get(0, 0);
+        if (p2.equals(p1)) {
+          p2 = path.get(1, 0);
+        }
+        attr().get(START_DECORATION).draw(g, this, p1, p2);
+      }
+      if (attr().get(END_DECORATION) != null) {
+        BezierPath cp = getCappedPath(AttributeKeys.getScaleFactorFromGraphics(g));
+        Point2D.Double p1 = path.get(path.size() - 1, 0);
+        Point2D.Double p2 = cp.get(path.size() - 1, 0);
+        if (p2.equals(p1)) {
+          p2 = path.get(path.size() - 2, 0);
+        }
+        attr().get(END_DECORATION).draw(g, this, p1, p2);
+      }
+    }
+  }
+
+  @Override
+  protected void drawFill(Graphics2D g) {
+    if (isClosed() || attr().get(UNCLOSED_PATH_FILLED)) {
+      double grow = AttributeKeys.getPerpendicularFillGrowth(
+          this, AttributeKeys.getScaleFactorFromGraphics(g));
+      if (grow == 0d) {
+        g.fill(path);
+      } else {
+        GrowStroke gs = new GrowStroke(
+            grow,
+            AttributeKeys.getStrokeTotalWidth(this, AttributeKeys.getScaleFactorFromGraphics(g))
+                * attr().get(STROKE_MITER_LIMIT));
+        g.fill(gs.createStrokedShape(path));
+      }
+    }
+  }
+
+  @Override
+  protected void validate() {
+    super.validate();
+    path.invalidatePath();
+    cappedPath = null;
+  }
+
+  @Override
+  protected <T> void fireAttributeChanged(AttributeKey<T> attribute, T oldValue, T newValue) {
+    if (attribute == PATH_CLOSED) {
+      path.setClosed((Boolean) newValue);
+    } else if (attribute == WINDING_RULE) {
+      path.setWindingRule(
+          newValue == AttributeKeys.WindingRule.EVEN_ODD
+              ? Path2D.Double.WIND_EVEN_ODD
+              : Path2D.Double.WIND_NON_ZERO);
+    }
+    invalidate();
+    super.fireAttributeChanged(attribute, oldValue, newValue);
+  }
+
+  /** Removes the Point2D.Double at the specified index. */
+  protected void removeAllNodes() {
+    path.clear();
   }
 }
