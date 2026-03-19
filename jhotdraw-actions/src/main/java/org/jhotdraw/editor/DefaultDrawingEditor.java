@@ -91,12 +91,7 @@ public class DefaultDrawingEditor extends AbstractBean implements DrawingEditor 
     }
 
     @Override
-    public void focusLost(FocusEvent e) {
-      /*
-      if (! e.isTemporary()) {
-      setFocusedView(null);
-      }*/
-    }
+    public void focusLost(FocusEvent e) {}
   };
 
   public DefaultDrawingEditor() {
