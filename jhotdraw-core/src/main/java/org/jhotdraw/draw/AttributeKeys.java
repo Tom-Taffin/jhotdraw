@@ -562,12 +562,13 @@ public class AttributeKeys {
   public static double getStrokeTotalWidth(Figure f, double factor) {
     switch (f.attr().get(STROKE_TYPE)) {
       case BASIC:
-      default:
         return f.attr().get(STROKE_WIDTH) / getGlobalValueFactor(f, factor);
       case DOUBLE:
         return f.attr().get(STROKE_WIDTH)
             * (1d + f.attr().get(STROKE_INNER_WIDTH_FACTOR))
             / getGlobalValueFactor(f, factor);
+      default:
+        throw new AssertionError("Unhandled StrokeType: " + f.attr().get(STROKE_TYPE));
     }
   }
 
@@ -616,7 +617,6 @@ public class AttributeKeys {
     }
     switch (f.attr().get(STROKE_TYPE)) {
       case BASIC:
-      default:
         return new BasicStroke(
             (float) strokeWidth,
             f.attr().get(STROKE_CAP),
@@ -624,7 +624,6 @@ public class AttributeKeys {
             Math.max(1, miterLimit),
             dashes,
             Math.max(0, (float) (dashPhase * dashFactor)));
-        // not reached
       case DOUBLE:
         return new DoubleStroke(
             (float) (f.attr().get(STROKE_INNER_WIDTH_FACTOR) * strokeWidth),
@@ -634,7 +633,8 @@ public class AttributeKeys {
             Math.max(1, miterLimit),
             dashes,
             Math.max(0, (float) (dashPhase * dashFactor)));
-        // not reached
+      default:
+        throw new AssertionError("Unhandled StrokeType: " + f.attr().get(STROKE_TYPE));
     }
   }
 
@@ -651,7 +651,6 @@ public class AttributeKeys {
     double dashFactor = f.attr().get(IS_STROKE_DASH_FACTOR) ? strokeWidth : 1d;
     switch (f.attr().get(STROKE_TYPE)) {
       case BASIC:
-      default:
         return new BasicStroke(
             (float) strokeWidth,
             f.attr().get(STROKE_CAP),
@@ -659,7 +658,7 @@ public class AttributeKeys {
             miterLimit,
             null,
             Math.max(0, (float) (f.attr().get(STROKE_DASH_PHASE) * dashFactor)));
-        // not reached
+
       case DOUBLE:
         return new DoubleStroke(
             (float) (f.attr().get(STROKE_INNER_WIDTH_FACTOR) * strokeWidth),
@@ -669,7 +668,8 @@ public class AttributeKeys {
             miterLimit,
             null,
             Math.max(0, (float) (f.attr().get(STROKE_DASH_PHASE).floatValue() * dashFactor)));
-        // not reached
+      default:
+        throw new AssertionError("Unhandled StrokeType: " + f.attr().get(STROKE_TYPE));
     }
   }
 
@@ -716,9 +716,10 @@ public class AttributeKeys {
             grow = strokeWidth;
             break;
           case CENTER:
-          default:
             grow = strokeWidth / 2d;
             break;
+          default:
+            throw new AssertionError("Unhandled StrokePlacement: " + placement);
         }
         break;
       case NONE:
@@ -730,13 +731,13 @@ public class AttributeKeys {
             grow = 0f;
             break;
           case CENTER:
-          default:
             grow = strokeWidth / -2d;
             break;
+          default:
+            throw new AssertionError("Unhandled StrokePlacement: " + placement);
         }
         break;
       case CENTER:
-      default:
         switch (placement) {
           case INSIDE:
             grow = strokeWidth / -2d;
@@ -745,11 +746,14 @@ public class AttributeKeys {
             grow = strokeWidth / 2d;
             break;
           case CENTER:
-          default:
             grow = 0d;
             break;
+          default:
+            throw new AssertionError("Unhandled StrokePlacement: " + placement);
         }
         break;
+      default:
+        throw new AssertionError("Unhandled FillUnderStroke: " + f.attr().get(FILL_UNDER_STROKE));
     }
     return grow;
   }
@@ -771,9 +775,10 @@ public class AttributeKeys {
         grow = strokeWidth / 2d;
         break;
       case CENTER:
-      default:
         grow = 0f;
         break;
+      default:
+        throw new AssertionError("Unhandled StrokePlacement: " + f.attr().get(STROKE_PLACEMENT));
     }
     return grow;
   }
