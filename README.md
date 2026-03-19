@@ -21,6 +21,20 @@
 * restructured project layout
   * introduced submodules
 
+## Modules presentation
+
+The project is structured into several Maven modules:
+
+- jhotdraw-core: the core of the framework. It contains all the fundamental abstractions—interfaces and base classes for figures, the drawing model, tools, the editor, and views. This is the module that all others depend on.
+
+- jhotdraw-io: handles the serialization and deserialization of drawings in XML format, enabling file saving and loading.
+
+- jhotdraw-gui: contains high-level Swing components (windows, menus, panels), acting as the bridge between the model and the user interface.
+
+- jhotdraw-utils: groups shared utilities used across other modules (geometric helpers, resource management, etc.).
+
+- jhotdraw-samples: includes several complete example applications built with the framework, serving as living documentation for users.
+
 ## Quickstart
 
 This projects jars are not yet published to maven central or GitHub packages. To use those you first need to build it with **maven** using: `mvn clean install`. Now all jars are published to your local maven repository. And you can include those artifacts using e.g.
