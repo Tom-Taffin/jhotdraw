@@ -48,66 +48,20 @@ public class DiamondFigure extends AbstractAttributedFigure {
   // DRAWING
   @Override
   protected void drawFill(Graphics2D g) {
-    Rectangle2D.Double r = (Rectangle2D.Double) rectangle.clone();
-    if (attr().get(IS_QUADRATIC)) {
-      double side = Math.max(r.width, r.height);
-      r.x -= (side - r.width) / 2;
-      r.y -= (side - r.height) / 2;
-      r.width = r.height = side;
-    }
+    Rectangle2D.Double bounds = getNormalizedBounds();
     double grow =
         AttributeKeys.getPerpendicularFillGrowth(this, AttributeKeys.getScaleFactorFromGraphics(g));
-    if (grow != 0d) {
-      double w = r.width / 2d;
-      double h = r.height / 2d;
-      double lineLength = Math.sqrt(w * w + h * h);
-      double scale = grow / lineLength;
-      double yb = scale * w;
-      double xa = scale * h;
-      double growx, growy;
-      growx = ((yb * yb) / xa + xa);
-      growy = ((xa * xa) / yb + yb);
-      Geom.grow(r, growx, growy);
-    }
-    Path2D.Double diamond = new Path2D.Double();
-    diamond.moveTo((r.x + r.width / 2), r.y);
-    diamond.lineTo((r.x + r.width), (r.y + r.height / 2));
-    diamond.lineTo((r.x + r.width / 2), (r.y + r.height));
-    diamond.lineTo(r.x, (r.y + r.height / 2));
-    diamond.closePath();
-    g.fill(diamond);
+    growBounds(bounds, grow);
+    g.fill(createDiamondPath(bounds));
   }
 
   @Override
   protected void drawStroke(Graphics2D g) {
-    Rectangle2D.Double r = (Rectangle2D.Double) rectangle.clone();
-    if (attr().get(IS_QUADRATIC)) {
-      double side = Math.max(r.width, r.height);
-      r.x -= (side - r.width) / 2;
-      r.y -= (side - r.height) / 2;
-      r.width = r.height = side;
-    }
+    Rectangle2D.Double bounds = getNormalizedBounds();
     double grow =
         AttributeKeys.getPerpendicularDrawGrowth(this, AttributeKeys.getScaleFactorFromGraphics(g));
-    if (grow != 0d) {
-      double growx, growy;
-      double w = r.width / 2d;
-      double h = r.height / 2d;
-      double lineLength = Math.sqrt(w * w + h * h);
-      double scale = grow / lineLength;
-      double yb = scale * w;
-      double xa = scale * h;
-      growx = ((yb * yb) / xa + xa);
-      growy = ((xa * xa) / yb + yb);
-      Geom.grow(r, growx, growy);
-    }
-    Path2D.Double diamond = new Path2D.Double();
-    diamond.moveTo((r.x + r.width / 2), r.y);
-    diamond.lineTo((r.x + r.width), (r.y + r.height / 2));
-    diamond.lineTo((r.x + r.width / 2), (r.y + r.height));
-    diamond.lineTo(r.x, (r.y + r.height / 2));
-    diamond.closePath();
-    g.draw(diamond);
+    growBounds(bounds, grow);
+    g.draw(createDiamondPath(bounds));
   }
 
   // SHAPE AND BOUNDS
@@ -118,62 +72,56 @@ public class DiamondFigure extends AbstractAttributedFigure {
     return bounds;
   }
 
-  @Override
-  public Rectangle2D.Double getDrawingArea(double scaleD) {
-    Rectangle2D.Double r = (Rectangle2D.Double) rectangle.clone();
+  private Rectangle2D.Double getNormalizedBounds() {
+    Rectangle2D.Double bounds = (Rectangle2D.Double) rectangle.clone();
     if (attr().get(IS_QUADRATIC)) {
-      double side = Math.max(r.width, r.height);
-      r.x -= (side - r.width) / 2;
-      r.y -= (side - r.height) / 2;
-      r.width = r.height = side;
+      double side = Math.max(bounds.width, bounds.height);
+      bounds.x -= (side - bounds.width) / 2;
+      bounds.y -= (side - bounds.height) / 2;
+      bounds.width = bounds.height = side;
     }
-    double grow = AttributeKeys.getPerpendicularHitGrowth(this, scaleD);
+    return bounds;
+  }
+
+  private void growBounds(Rectangle2D.Double bounds, double grow) {
     if (grow != 0d) {
-      double w = r.width / 2d;
-      double h = r.height / 2d;
+      double w = bounds.width / 2d;
+      double h = bounds.height / 2d;
       double lineLength = Math.sqrt(w * w + h * h);
       double scale = grow / lineLength;
       double yb = scale * w;
       double xa = scale * h;
-      double growx, growy;
-      growx = ((yb * yb) / xa + xa);
-      growy = ((xa * xa) / yb + yb);
-      Geom.grow(r, growx, growy);
+      double growx = ((yb * yb) / xa + xa);
+      double growy = ((xa * xa) / yb + yb);
+      Geom.grow(bounds, growx, growy);
     }
-    return r;
+  }
+
+  private Path2D.Double createDiamondPath(Rectangle2D.Double bounds) {
+    Path2D.Double diamond = new Path2D.Double();
+    diamond.moveTo((bounds.x + bounds.width / 2), bounds.y);
+    diamond.lineTo((bounds.x + bounds.width), (bounds.y + bounds.height / 2));
+    diamond.lineTo((bounds.x + bounds.width / 2), (bounds.y + bounds.height));
+    diamond.lineTo(bounds.x, (bounds.y + bounds.height / 2));
+    diamond.closePath();
+    return diamond;
+  }
+
+  @Override
+  public Rectangle2D.Double getDrawingArea(double scaleD) {
+    Rectangle2D.Double bounds = getNormalizedBounds();
+    double grow = AttributeKeys.getPerpendicularHitGrowth(this, scaleD);
+    growBounds(bounds, grow);
+    return bounds;
   }
 
   /** Checks if a Point2D.Double is inside the figure. */
   @Override
   public boolean contains(Point2D.Double p, double scaleDenominator) {
-    Rectangle2D.Double r = (Rectangle2D.Double) rectangle.clone();
-    if (attr().get(IS_QUADRATIC)) {
-      double side = Math.max(r.width, r.height);
-      r.x -= (side - r.width) / 2;
-      r.y -= (side - r.height) / 2;
-      r.width = r.height = side;
-    }
-    //   if (r.contains(p)) {
+    Rectangle2D.Double bounds = getNormalizedBounds();
     double grow = AttributeKeys.getPerpendicularFillGrowth(this, scaleDenominator);
-    if (grow != 0d) {
-      double w = r.width / 2d;
-      double h = r.height / 2d;
-      double lineLength = Math.sqrt(w * w + h * h);
-      double scale = grow / lineLength;
-      double yb = scale * w;
-      double xa = scale * h;
-      double growx, growy;
-      growx = ((yb * yb) / xa + xa);
-      growy = ((xa * xa) / yb + yb);
-      Geom.grow(r, growx, growy);
-    }
-    Path2D.Double diamond = new Path2D.Double();
-    diamond.moveTo((r.x + r.width / 2), r.y);
-    diamond.lineTo((r.x + r.width), (r.y + r.height / 2));
-    diamond.lineTo((r.x + r.width / 2), (r.y + r.height));
-    diamond.lineTo(r.x, (r.y + r.height / 2));
-    diamond.closePath();
-    return diamond.contains(p);
+    growBounds(bounds, grow);
+    return createDiamondPath(bounds).contains(p);
   }
 
   @Override
