@@ -113,45 +113,47 @@ public class BezierFigure extends AbstractAttributedFigure {
   public boolean contains(Point2D.Double p, double scaleDenominator) {
     double tolerance =
         Math.max(1f, 2 * AttributeKeys.getPerpendicularHitGrowth(this, scaleDenominator));
-    if (isClosed() || attr().get(FILL_COLOR) != null && attr().get(UNCLOSED_PATH_FILLED)) {
+    boolean isFilled =
+        isClosed() || attr().get(FILL_COLOR) != null && attr().get(UNCLOSED_PATH_FILLED);
+
+    if (isFilled) {
       if (path.contains(p)) {
         return true;
       }
-      double grow = tolerance;
       GrowStroke gs = new GrowStroke(
-          grow,
+          tolerance,
           AttributeKeys.getStrokeTotalWidth(this, scaleDenominator)
               * attr().get(STROKE_MITER_LIMIT));
       if (gs.createStrokedShape(path).contains(p)) {
         return true;
-      } else {
-        if (isClosed()) {
-          return false;
-        }
+      }
+      if (isClosed()) {
+        return false;
       }
     }
+
     if (!isClosed()) {
-      if (getCappedPath(scaleDenominator).outlineContains(p, tolerance)) {
+      BezierPath cappedPath = getCappedPath(scaleDenominator);
+      if (cappedPath.outlineContains(p, tolerance)) {
         return true;
       }
-      if (attr().get(START_DECORATION) != null) {
-        BezierPath cp = getCappedPath(scaleDenominator);
-        Point2D.Double p1 = path.get(0, 0);
-        Point2D.Double p2 = cp.get(0, 0);
-        // FIXME - Check here, if caps path contains the point
-        if (Geom.lineContainsPoint(p1.x, p1.y, p2.x, p2.y, p.x, p.y, tolerance)) {
-          return true;
-        }
-      }
-      if (attr().get(END_DECORATION) != null) {
-        BezierPath cp = getCappedPath(scaleDenominator);
-        Point2D.Double p1 = path.get(path.size() - 1, 0);
-        Point2D.Double p2 = cp.get(path.size() - 1, 0);
-        // FIXME - Check here, if caps path contains the point
-        if (Geom.lineContainsPoint(p1.x, p1.y, p2.x, p2.y, p.x, p.y, tolerance)) {
-          return true;
-        }
-      }
+      return checkDecoration(p, cappedPath, 0, tolerance)
+          || checkDecoration(p, cappedPath, path.size() - 1, tolerance);
+    }
+
+    return false;
+  }
+
+  /**
+   * Checks if the point is within the decoration area at the specified node index.
+   */
+  private boolean checkDecoration(Point2D.Double p, BezierPath cp, int index, double tolerance) {
+    AttributeKey<?> decorationKey = (index == 0) ? START_DECORATION : END_DECORATION;
+    if (attr().get(decorationKey) != null) {
+      Point2D.Double p1 = path.get(index, 0);
+      Point2D.Double p2 = cp.get(index, 0);
+      // FIXME - Check here, if caps path contains the point
+      return Geom.lineContainsPoint(p1.x, p1.y, p2.x, p2.y, p.x, p.y, tolerance);
     }
     return false;
   }
