@@ -32,6 +32,7 @@ import org.jhotdraw.draw.AttributeKeys;
 import org.jhotdraw.draw.DrawingView;
 import org.jhotdraw.draw.connector.ChopBezierConnector;
 import org.jhotdraw.draw.connector.Connector;
+import org.jhotdraw.draw.decoration.LineDecoration;
 import org.jhotdraw.draw.handle.BezierNodeHandle;
 import org.jhotdraw.draw.handle.BezierOutlineHandle;
 import org.jhotdraw.draw.handle.BezierScaleHandle;
@@ -167,47 +168,62 @@ public class BezierFigure extends AbstractAttributedFigure {
       cappedPathFactor = factor;
       if (isClosed()) {
         cappedPath.setClosed(true);
-      } else {
-        if (cappedPath.size() > 1) {
-          if (attr().get(START_DECORATION) != null) {
-            BezierPath.Node p0 = cappedPath.nodes().get(0);
-            BezierPath.Node p1 = cappedPath.nodes().get(1);
-            Point2D.Double pp;
-            if ((p0.getMask() & BezierPath.C2_MASK) != 0) {
-              pp = p0.getControlPoint(2);
-            } else if ((p1.getMask() & BezierPath.C1_MASK) != 0) {
-              pp = p1.getControlPoint(1);
-            } else {
-              pp = p1.getControlPoint(0);
-            }
-            double radius = attr().get(START_DECORATION).getDecorationRadius(this, factor);
-            double lineLength = Geom.length(p0.getControlPoint(0), pp);
-            cappedPath.set(
-                0, 0, Geom.cap(pp, p0.getControlPoint(0), -Math.min(radius, lineLength)));
-          }
-          if (attr().get(END_DECORATION) != null) {
-            BezierPath.Node p0 = cappedPath.nodes().get(cappedPath.size() - 1);
-            BezierPath.Node p1 = cappedPath.nodes().get(cappedPath.size() - 2);
-            Point2D.Double pp;
-            if ((p0.getMask() & BezierPath.C1_MASK) != 0) {
-              pp = p0.getControlPoint(1);
-            } else if ((p1.getMask() & BezierPath.C2_MASK) != 0) {
-              pp = p1.getControlPoint(2);
-            } else {
-              pp = p1.getControlPoint(0);
-            }
-            double radius = attr().get(END_DECORATION).getDecorationRadius(this, factor);
-            double lineLength = Geom.length(p0.getControlPoint(0), pp);
-            cappedPath.set(
-                cappedPath.size() - 1,
-                0,
-                Geom.cap(pp, p0.getControlPoint(0), -Math.min(radius, lineLength)));
-          }
-          cappedPath.invalidatePath();
-        }
+      } else if (cappedPath.size() > 1) {
+        applyCappedDecoration(0, 1, true, factor);
+        applyCappedDecoration(cappedPath.size() - 1, cappedPath.size() - 2, false, factor);
+        cappedPath.invalidatePath();
       }
     }
     return cappedPath;
+  }
+
+  /**
+   * Applies a decoration cap to a node in the capped path.
+   * @param nodeIndex The node to cap
+   * @param adjacentNodeIndex The adjacent node to determine the control point direction
+   * @param isStart True if this is the start decoration, false for end
+   * @param factor The scale factor
+   */
+  private void applyCappedDecoration(
+      int nodeIndex, int adjacentNodeIndex, boolean isStart, double factor) {
+    AttributeKey<?> decorationKey = isStart ? START_DECORATION : END_DECORATION;
+    if (attr().get(decorationKey) == null) {
+      return;
+    }
+
+    BezierPath.Node p0 = cappedPath.nodes().get(nodeIndex);
+    BezierPath.Node p1 = cappedPath.nodes().get(adjacentNodeIndex);
+    Point2D.Double pp = getRelevantControlPoint(p0, p1, isStart);
+
+    double radius = ((LineDecoration) attr().get(decorationKey)).getDecorationRadius(this, factor);
+    double lineLength = Geom.length(p0.getControlPoint(0), pp);
+    cappedPath.set(
+        nodeIndex, 0, Geom.cap(pp, p0.getControlPoint(0), -Math.min(radius, lineLength)));
+  }
+
+  /**
+   * Gets the relevant control point based on the mask of the nodes.
+   * @param currentNode The node to apply decoration to
+   * @param adjacentNode The adjacent node for reference
+   * @param isStart True if getting control point for start decoration
+   * @return The relevant control point
+   */
+  private Point2D.Double getRelevantControlPoint(
+      BezierPath.Node currentNode, BezierPath.Node adjacentNode, boolean isStart) {
+    if (isStart) {
+      if ((currentNode.getMask() & BezierPath.C2_MASK) != 0) {
+        return currentNode.getControlPoint(2);
+      } else if ((adjacentNode.getMask() & BezierPath.C1_MASK) != 0) {
+        return adjacentNode.getControlPoint(1);
+      }
+    } else {
+      if ((currentNode.getMask() & BezierPath.C1_MASK) != 0) {
+        return currentNode.getControlPoint(1);
+      } else if ((adjacentNode.getMask() & BezierPath.C2_MASK) != 0) {
+        return adjacentNode.getControlPoint(2);
+      }
+    }
+    return adjacentNode.getControlPoint(0);
   }
 
   @Override
