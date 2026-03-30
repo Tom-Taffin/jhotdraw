@@ -9,8 +9,6 @@ package org.jhotdraw.draw.figure;
 
 import static org.jhotdraw.draw.AttributeKeys.*;
 
-import java.awt.Color;
-import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.font.FontRenderContext;
 import java.awt.font.TextAttribute;
@@ -34,7 +32,6 @@ import org.jhotdraw.draw.tool.Tool;
 import org.jhotdraw.utils.geom.Dimension2DDouble;
 import org.jhotdraw.utils.geom.Geom;
 import org.jhotdraw.utils.geom.Insets2D;
-import org.jhotdraw.utils.util.ResourceBundleUtil;
 
 /**
  * A {@code TextHolderFigure} which holds a single line of text.
@@ -42,10 +39,10 @@ import org.jhotdraw.utils.util.ResourceBundleUtil;
  * <p>A DrawingEditor should provide the {@link org.jhotdraw.draw.tool.TextCreationTool} to create a
  * {@code TextFigure}.
  */
-public class TextFigure extends AbstractAttributedDecoratedFigure
-    implements TextHolderFigure, Origin, Rotation {
+public class TextFigure extends AbstractTextHolderFigure implements Origin, Rotation {
 
   private static final long serialVersionUID = 1L;
+
   protected Point2D.Double origin = new Point2D.Double();
 
   public static final Point2D.Double HORIZONTAL_DIRECTION = new Point2D.Double(1, 0);
@@ -53,7 +50,6 @@ public class TextFigure extends AbstractAttributedDecoratedFigure
   // always starting from 0,0
   protected Point2D.Double direction = new Point2D.Double(1, 0);
 
-  protected boolean editable = true;
   // cache of the TextFigure's layout
   protected transient TextLayout textLayout;
 
@@ -61,12 +57,11 @@ public class TextFigure extends AbstractAttributedDecoratedFigure
   protected double alignY;
 
   public TextFigure() {
-    this(ResourceBundleUtil.getBundle("org.jhotdraw.draw.Labels")
-        .getString("TextFigure.defaultText"));
+    super();
   }
 
   public TextFigure(String text) {
-    setText(text);
+    super(text);
   }
 
   // DRAWING
@@ -272,36 +267,10 @@ public class TextFigure extends AbstractAttributedDecoratedFigure
   }
 
   // ATTRIBUTES
-  /** Gets the text shown by the text figure. */
-  @Override
-  public String getText() {
-    return attr().get(TEXT);
-  }
-
-  /**
-   * Sets the text shown by the text figure. This is a convenience method for calling {@code
-   * set(TEXT,newText)}.
-   */
-  @Override
-  public void setText(String newText) {
-    attr().set(TEXT, newText);
-  }
-
   @Override
   public int getTextColumns() {
     // return (getText() == null) ? 4 : Math.max(getText().length(), 4);
     return 4;
-  }
-
-  /** Gets the number of characters used to expand tabs. */
-  @Override
-  public int getTabSize() {
-    return 8;
-  }
-
-  @Override
-  public TextHolderFigure getLabelFor() {
-    return this;
   }
 
   @Override
@@ -309,41 +278,7 @@ public class TextFigure extends AbstractAttributedDecoratedFigure
     return new Insets2D.Double();
   }
 
-  @Override
-  public Font getFont() {
-    return AttributeKeys.getFont(this);
-  }
-
-  @Override
-  public Color getTextColor() {
-    return attr().get(TEXT_COLOR);
-  }
-
-  @Override
-  public Color getFillColor() {
-    return attr().get(FILL_COLOR);
-  }
-
-  @Override
-  public void setFontSize(double size) {
-    attr().set(FONT_SIZE, size);
-  }
-
-  @Override
-  public double getFontSize() {
-    return attr().get(FONT_SIZE);
-  }
-
   // EDITING
-  @Override
-  public boolean isEditable() {
-    return editable;
-  }
-
-  public void setEditable(boolean b) {
-    this.editable = b;
-  }
-
   @Override
   public Collection<Handle> createHandles(int detailLevel) {
     Collection<Handle> handles = new ArrayList<>();

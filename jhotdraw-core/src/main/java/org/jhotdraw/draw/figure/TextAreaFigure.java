@@ -9,7 +9,6 @@ package org.jhotdraw.draw.figure;
 
 import static org.jhotdraw.draw.AttributeKeys.*;
 
-import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.Shape;
@@ -25,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import org.jhotdraw.draw.AttributeKeys;
 import org.jhotdraw.draw.DrawingView;
 import org.jhotdraw.draw.handle.FontSizeHandle;
 import org.jhotdraw.draw.handle.Handle;
@@ -34,7 +32,6 @@ import org.jhotdraw.draw.tool.TextAreaEditingTool;
 import org.jhotdraw.draw.tool.Tool;
 import org.jhotdraw.utils.geom.Dimension2DDouble;
 import org.jhotdraw.utils.geom.Insets2D;
-import org.jhotdraw.utils.util.ResourceBundleUtil;
 
 /**
  * A {@code TextHolderFigure} which holds multiple lines of text in a rectangular area.
@@ -63,22 +60,21 @@ import org.jhotdraw.utils.util.ResourceBundleUtil;
  *     version)
  * @version $Id$
  */
-public class TextAreaFigure extends AbstractAttributedDecoratedFigure implements TextHolderFigure {
+public class TextAreaFigure extends AbstractTextHolderFigure {
 
   private static final long serialVersionUID = 1L;
+
   protected Rectangle2D.Double bounds = new Rectangle2D.Double();
-  protected boolean editable = true;
 
   /** This is a cached value to improve the performance of method isTextOverflow(); */
   private Boolean isTextOverflow;
 
   public TextAreaFigure() {
-    this(ResourceBundleUtil.getBundle("org.jhotdraw.draw.Labels")
-        .getString("TextFigure.defaultText"));
+    super();
   }
 
   public TextAreaFigure(String text) {
-    setText(text);
+    super(text);
   }
 
   // DRAWING
@@ -329,12 +325,6 @@ public class TextAreaFigure extends AbstractAttributedDecoratedFigure implements
   }
 
   // ATTRIBUTES
-  /** Gets the text shown by the text figure. */
-  @Override
-  public String getText() {
-    return attr().get(TEXT);
-  }
-
   /** Returns the insets used to draw text. */
   @Override
   public Insets2D.Double getInsets() {
@@ -351,54 +341,8 @@ public class TextAreaFigure extends AbstractAttributedDecoratedFigure implements
   }
 
   @Override
-  public int getTabSize() {
-    return 8;
-  }
-
-  /** Sets the text shown by the text figure. */
-  @Override
-  public void setText(String newText) {
-    attr().set(TEXT, newText);
-  }
-
-  @Override
   public int getTextColumns() {
     return (getText() == null) ? 4 : Math.max(getText().length(), 4);
-  }
-
-  @Override
-  public Font getFont() {
-    return AttributeKeys.getFont(this);
-  }
-
-  @Override
-  public Color getTextColor() {
-    return attr().get(TEXT_COLOR);
-  }
-
-  @Override
-  public Color getFillColor() {
-    return attr().get(FILL_COLOR);
-  }
-
-  @Override
-  public void setFontSize(double size) {
-    attr().set(FONT_SIZE, size);
-  }
-
-  @Override
-  public double getFontSize() {
-    return attr().get(FONT_SIZE);
-  }
-
-  // EDITING
-  @Override
-  public boolean isEditable() {
-    return editable;
-  }
-
-  public void setEditable(boolean b) {
-    this.editable = b;
   }
 
   /**
@@ -413,11 +357,6 @@ public class TextAreaFigure extends AbstractAttributedDecoratedFigure implements
       return tool;
     }
     return null;
-  }
-
-  @Override
-  public TextHolderFigure getLabelFor() {
-    return this;
   }
 
   // CONNECTING
