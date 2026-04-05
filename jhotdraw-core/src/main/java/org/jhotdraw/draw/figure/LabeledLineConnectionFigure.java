@@ -344,12 +344,12 @@ public class LabeledLineConnectionFigure extends LineConnectionFigure implements
 
   @Override
   public void removeCompositeFigureListener(CompositeFigureListener listener) {
-    listenerList.remove(CompositeFigureListener.class, listener);
+    eventManager.remove(CompositeFigureListener.class, listener);
   }
 
   @Override
   public void addCompositeFigureListener(CompositeFigureListener listener) {
-    listenerList.add(CompositeFigureListener.class, listener);
+    eventManager.add(CompositeFigureListener.class, listener);
   }
 
   /** Notify all listenerList that have registered interest for notification on this event type. */
@@ -357,7 +357,7 @@ public class LabeledLineConnectionFigure extends LineConnectionFigure implements
     CompositeFigureEvent event = null;
     // Notify all listeners that have registered interest for
     // Guaranteed to return a non-null array
-    Object[] listeners = listenerList.getListenerList();
+    Object[] listeners = eventManager.getListenerList();
     // Process the listeners last to first, notifying
     // those that are interested in this event
     for (int i = listeners.length - 2; i >= 0; i -= 2) {
@@ -376,7 +376,7 @@ public class LabeledLineConnectionFigure extends LineConnectionFigure implements
     CompositeFigureEvent event = null;
     // Notify all listeners that have registered interest for
     // Guaranteed to return a non-null array
-    Object[] listeners = listenerList.getListenerList();
+    Object[] listeners = eventManager.getListenerList();
     // Process the listeners last to first, notifying
     // those that are interested in this event
     for (int i = listeners.length - 2; i >= 0; i -= 2) {

@@ -632,11 +632,11 @@ public abstract class AbstractAttributedCompositeFigure extends AbstractAttribut
       BiConsumer<CompositeFigureListener, CompositeFigureEvent> listenerConsumer,
       Supplier<CompositeFigureEvent> eventSupplier) {
     CompositeFigureEvent event = null;
-    if (listenerList.getListenerCount() == 0) {
+    if (eventManager.getListenerCount() == 0) {
       return;
     }
     for (CompositeFigureListener listener :
-        listenerList.getListeners(CompositeFigureListener.class)) {
+        eventManager.getListeners(CompositeFigureListener.class)) {
       if (event == null) {
         event = eventSupplier.get();
       }
@@ -660,12 +660,12 @@ public abstract class AbstractAttributedCompositeFigure extends AbstractAttribut
 
   @Override
   public void removeCompositeFigureListener(CompositeFigureListener listener) {
-    listenerList.remove(CompositeFigureListener.class, listener);
+    eventManager.remove(CompositeFigureListener.class, listener);
   }
 
   @Override
   public void addCompositeFigureListener(CompositeFigureListener listener) {
-    listenerList.add(CompositeFigureListener.class, listener);
+    eventManager.add(CompositeFigureListener.class, listener);
   }
 
   private Attributes attributes = new Attributes(

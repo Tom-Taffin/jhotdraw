@@ -7,9 +7,6 @@
  */
 package org.jhotdraw.draw.figure;
 
-import static org.jhotdraw.draw.AttributeKeys.*;
-
-import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Graphics2D;
 import java.awt.event.MouseEvent;
@@ -22,11 +19,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiConsumer;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
 import javax.swing.Action;
-import javax.swing.event.EventListenerList;
 import javax.swing.undo.UndoableEdit;
 import org.jhotdraw.draw.AttributeKey;
 import org.jhotdraw.draw.AttributeKeys;
@@ -34,12 +27,14 @@ import org.jhotdraw.draw.Drawing;
 import org.jhotdraw.draw.DrawingView;
 import org.jhotdraw.draw.connector.ChopRectangleConnector;
 import org.jhotdraw.draw.connector.Connector;
+import org.jhotdraw.draw.event.EventManager;
 import org.jhotdraw.draw.event.FigureEvent;
 import org.jhotdraw.draw.event.FigureListener;
 import org.jhotdraw.draw.event.SetBoundsEdit;
 import org.jhotdraw.draw.handle.BoundsOutlineHandle;
 import org.jhotdraw.draw.handle.Handle;
 import org.jhotdraw.draw.handle.ResizeHandleKit;
+import org.jhotdraw.draw.style.StyleApplier;
 import org.jhotdraw.draw.tool.Tool;
 import org.jhotdraw.utils.geom.Dimension2DDouble;
 import org.jhotdraw.utils.geom.Geom;
@@ -51,8 +46,8 @@ import org.jhotdraw.utils.geom.Geom;
 public abstract class AbstractAttributedFigure implements Figure, Cloneable {
 
   private static final long serialVersionUID = 1L;
-  protected EventListenerList listenerList = new EventListenerList();
   private Drawing drawing;
+  protected EventManager eventManager = new EventManager(this);
   private boolean isSelectable = true;
   private boolean isRemovable = true;
   private boolean isVisible = true;
@@ -75,31 +70,12 @@ public abstract class AbstractAttributedFigure implements Figure, Cloneable {
 
   @Override
   public void draw(Graphics2D g) {
-    if (attr().get(FILL_COLOR) != null) {
-      var fillColor = attr().get(FILL_COLOR);
-      Float opacity = attr().get(OPACITY);
-      if (opacity < 1) {
-        fillColor = new Color(fillColor.getRGB() & 0xffffff | ((int) (opacity * 256) << 24), true);
-      }
-      g.setColor(fillColor);
-      drawFill(g);
-    }
-    if (attr().get(STROKE_COLOR) != null && attr().get(STROKE_WIDTH) >= 0d) {
-      g.setStroke(AttributeKeys.getStroke(this, AttributeKeys.getScaleFactorFromGraphics(g)));
-      g.setColor(attr().get(STROKE_COLOR));
-      drawStroke(g);
-    }
-    if (attr().get(TEXT_COLOR) != null) {
-      if (attr().get(TEXT_SHADOW_COLOR) != null && attr().get(TEXT_SHADOW_OFFSET) != null) {
-        Dimension2DDouble d = attr().get(TEXT_SHADOW_OFFSET);
-        g.translate(d.width, d.height);
-        g.setColor(attr().get(TEXT_SHADOW_COLOR));
-        drawText(g);
-        g.translate(-d.width, -d.height);
-      }
-      g.setColor(attr().get(TEXT_COLOR));
-      drawText(g);
-    }
+    StyleApplier applier = new StyleApplier(this);
+    double scale = AttributeKeys.getScaleFactorFromGraphics(g);
+
+    applier.applyFillStyle(g, () -> drawFill(g));
+    applier.applyStrokeStyle(g, scale, () -> drawStroke(g));
+    applier.applyTextStyle(g, () -> drawText(g));
   }
 
   public double getStrokeMiterLimitFactor() {
@@ -155,33 +131,32 @@ public abstract class AbstractAttributedFigure implements Figure, Cloneable {
       throw new InternalError("clone failed", ex);
     }
     that.attributes = Attributes.from(attributes, that::fireAttributeChanged);
-    that.listenerList = new EventListenerList();
+    that.eventManager = new EventManager(that);
     that.drawing = null; // Clones need to be explictly added to a drawing
     return that;
   }
 
   @Override
   public void addFigureListener(FigureListener l) {
-    if (Stream.of(listenerList.getListeners(FigureListener.class))
-        .noneMatch(listener -> listener.equals(l))) {
-      listenerList.add(FigureListener.class, l);
-    }
+    eventManager.addFigureListener(l);
   }
 
   @Override
   public void removeFigureListener(FigureListener l) {
-    listenerList.remove(FigureListener.class, l);
+    eventManager.removeFigureListener(l);
   }
 
   @Override
   public void addNotify(Drawing d) {
     this.drawing = d;
-    fireFigureAdded();
+    eventManager.setDrawing(d);
+    eventManager.fireFigureAdded(getBounds(AttributeKeys.scaleFromContext(this)));
   }
 
   @Override
   public void removeNotify(Drawing d) {
-    fireFigureRemoved();
+    eventManager.fireFigureRemoved(getBounds(AttributeKeys.scaleFromContext(this)));
+    eventManager.setDrawing(null);
     this.drawing = null;
   }
 
@@ -198,6 +173,7 @@ public abstract class AbstractAttributedFigure implements Figure, Cloneable {
     if (this.drawing != null)
       throw new IllegalStateException("figure is already part of a drawing");
     this.drawing = d;
+    eventManager.setDrawing(d);
   }
 
   private boolean modified = false;
@@ -219,20 +195,14 @@ public abstract class AbstractAttributedFigure implements Figure, Cloneable {
   //    return (getDrawing() == null) ? this : getDrawing().getLock();
   //  }
 
-  /** tool method to process a listener and create its event object lazily. */
-  protected void fireFigureEvent(
-      BiConsumer<FigureListener, FigureEvent> listenerConsumer,
-      Supplier<FigureEvent> eventSupplier) {
-    FigureEvent event = null;
-    if (listenerList.getListenerCount() == 0) {
-      return;
-    }
-    for (FigureListener listener : listenerList.getListeners(FigureListener.class)) {
-      if (event == null) {
-        event = eventSupplier.get();
-      }
-      listenerConsumer.accept(listener, event);
-    }
+  /** Notify all listenerList that have registered interest for notification on this event type. */
+  protected void fireAreaInvalidated(Rectangle2D.Double invalidatedArea) {
+    eventManager.fireAreaInvalidated(invalidatedArea);
+  }
+
+  /** Notify all listenerList that have registered interest for notification on this event type. */
+  protected void fireAreaInvalidated(FigureEvent event) {
+    eventManager.fireAreaInvalidated(event);
   }
 
   /** Notify all listenerList that have registered interest for notification on this event type. */
@@ -241,38 +211,18 @@ public abstract class AbstractAttributedFigure implements Figure, Cloneable {
   }
 
   /** Notify all listenerList that have registered interest for notification on this event type. */
-  protected void fireAreaInvalidated(Rectangle2D.Double invalidatedArea) {
-    fireFigureEvent(
-        (listener, event) -> listener.areaInvalidated(event),
-        () -> new FigureEvent(this, invalidatedArea));
-  }
-
-  /** Notify all listenerList that have registered interest for notification on this event type. */
-  protected void fireAreaInvalidated(FigureEvent event) {
-    for (FigureListener listener : listenerList.getListeners(FigureListener.class)) {
-      listener.areaInvalidated(event);
-    }
-  }
-
-  /** Notify all listenerList that have registered interest for notification on this event type. */
   protected void fireFigureRequestRemove() {
-    fireFigureEvent(
-        (listener, event) -> listener.figureRequestRemove(event),
-        () -> new FigureEvent(this, getBounds(AttributeKeys.scaleFromContext(this))));
+    eventManager.fireFigureRequestRemove(getBounds(AttributeKeys.scaleFromContext(this)));
   }
 
   /** Notify all listenerList that have registered interest for notification on this event type. */
   protected void fireFigureAdded() {
-    fireFigureEvent(
-        (listener, event) -> listener.figureAdded(event),
-        () -> new FigureEvent(this, getBounds(AttributeKeys.scaleFromContext(this))));
+    eventManager.fireFigureAdded(getBounds(AttributeKeys.scaleFromContext(this)));
   }
 
   /** Notify all listenerList that have registered interest for notification on this event type. */
   protected void fireFigureRemoved() {
-    fireFigureEvent(
-        (listener, event) -> listener.figureRemoved(event),
-        () -> new FigureEvent(this, getBounds(AttributeKeys.scaleFromContext(this))));
+    eventManager.fireFigureRemoved(getBounds(AttributeKeys.scaleFromContext(this)));
   }
 
   public void fireFigureChanged() {
@@ -281,27 +231,21 @@ public abstract class AbstractAttributedFigure implements Figure, Cloneable {
 
   /** Notify all listenerList that have registered interest for notification on this event type. */
   protected void fireFigureChanged(Rectangle2D.Double changedArea) {
-    fireFigureEvent(
-        (listener, event) -> listener.figureChanged(event),
-        () -> new FigureEvent(this, changedArea));
+    eventManager.fireFigureChanged(changedArea);
   }
 
   protected void fireFigureChanged(FigureEvent event) {
-    fireFigureEvent((listener, evt) -> listener.figureChanged(evt), () -> event);
+    eventManager.fireFigureChanged(event);
   }
 
   /** Notify all listenerList that have registered interest for notification on this event type. */
   protected <T> void fireAttributeChanged(AttributeKey<T> attribute, T oldValue, T newValue) {
-    fireFigureEvent(
-        (listener, event) -> listener.attributeChanged(event),
-        () -> new FigureEvent(this, attribute, oldValue, newValue));
+    eventManager.fireAttributeChanged(attribute, oldValue, newValue);
   }
 
   /** Notify all listenerList that have registered interest for notification on this event type. */
   protected void fireFigureHandlesChanged() {
-    fireFigureEvent(
-        (listener, event) -> listener.figureHandlesChanged(event),
-        () -> new FigureEvent(this, getDrawingArea()));
+    eventManager.fireFigureHandlesChanged(getDrawingArea());
   }
 
   /**
@@ -309,9 +253,7 @@ public abstract class AbstractAttributedFigure implements Figure, Cloneable {
    * Figure is not part of a Drawing, the event is lost.
    */
   protected void fireUndoableEditHappened(UndoableEdit edit) {
-    if (getDrawing() != null) {
-      getDrawing().fireUndoableEditHappened(edit);
-    }
+    eventManager.fireUndoableEditHappened(edit);
   }
 
   @Override
